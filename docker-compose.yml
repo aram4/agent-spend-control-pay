@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: spendctl
+      POSTGRES_PASSWORD: spendctl
+      POSTGRES_DB: spendctl
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spendctl -d spendctl"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Optional: `docker compose --profile temporal up -d`
+  temporal:
+    profiles: ["temporal"]
+    image: temporalio/temporal:latest
+    command: ["server", "start-dev", "--ip", "0.0.0.0"]
+    ports:
+      - "7233:7233"
+      - "8233:8233"
+
+volumes:
+  pgdata:
