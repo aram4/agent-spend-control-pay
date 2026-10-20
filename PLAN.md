@@ -35,7 +35,7 @@ A spend-control layer that sits between an AI agent and a real payment rail. The
 ## 3. Repo structure
 
 ```
-agent-spend-control/
+agent-spend-control-pay/
 ├── PLAN.md
 ├── README.md
 ├── docker-compose.yml          # postgres (+ optional temporal)
