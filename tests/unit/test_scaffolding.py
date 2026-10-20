@@ -42,7 +42,6 @@ class _PingWorkflow:
 async def test_worker_runs_ping_activity():
     async with await WorkflowEnvironment.start_time_skipping() as env:
         queue = f"test-{uuid.uuid4()}"
-        # The real worker (activities only) serves the activity; a test-only worker runs the workflow.
         async with build_worker(env.client, task_queue=queue), Worker(
             env.client, task_queue=queue, workflows=[_PingWorkflow]
         ):

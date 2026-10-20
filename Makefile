@@ -1,6 +1,5 @@
-.PHONY: up down migrate test worker api
+.PHONY: up down migrate test stress worker api
 
-# Uses docker compose when available; otherwise provisions a local Postgres.
 up:
 	@if command -v docker >/dev/null 2>&1; then \
 		docker compose up -d --wait postgres; \
@@ -19,6 +18,9 @@ migrate:
 
 test:
 	uv run pytest
+
+stress:
+	uv run pytest tests/concurrency tests/unit/test_reservations.py --count=50 -x -q
 
 worker:
 	uv run python -m spendctl.worker

@@ -12,7 +12,6 @@ class Settings(BaseSettings):
     temporal_namespace: str = "default"
     task_queue: str = "spendctl"
 
-    # Real Privacy API calls only happen when this is explicitly true.
     privacy_live: bool = False
 
 

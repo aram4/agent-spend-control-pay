@@ -46,6 +46,7 @@ Tests use Temporal's time-skipping test environment, which the SDK downloads on 
 |---|---|
 | `make up` | Postgres up (Docker or local), `uv sync`, `alembic upgrade head` |
 | `make test` | `pytest` against the `spendctl_test` database |
+| `make stress` | Concurrency + idempotency tests for the money path, 50 runs in a row |
 | `make worker` | Run the Temporal worker |
 | `make api` | Run the FastAPI app with reload |
 | `make migrate` | Apply Alembic migrations |

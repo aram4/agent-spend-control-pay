@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Fallback for machines without Docker: provision the spendctl role and
-# databases on an already-running local Postgres 16.
+# Fallback for machines without Docker: provisions an already-running local Postgres.
 set -euo pipefail
 
 pg_isready -q || { echo "No local Postgres is accepting connections." >&2; exit 1; }
