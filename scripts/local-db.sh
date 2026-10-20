@@ -13,3 +13,4 @@ for db in spendctl spendctl_test; do
     || psql -d postgres -qc "CREATE DATABASE $db OWNER spendctl"
 done
 echo "Local Postgres ready (spendctl, spendctl_test)."
+echo "Set DATABASE_URL and TEST_DATABASE_URL to port 5432 in .env (see .env.example)."

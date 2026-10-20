@@ -5,7 +5,7 @@ A spend-control layer between an AI agent and a real payment rail. The agent nev
 ## Prerequisites
 
 - [uv](https://docs.astral.sh/uv/) (installs Python 3.12 automatically)
-- Postgres 16, via **either** Docker (`docker compose`) **or** a local install (e.g. `brew install postgresql@16 && brew services start postgresql@16`)
+- Postgres 16, via **either** Docker (`docker compose`; on macOS without Docker Desktop: `brew install docker docker-compose colima && colima start`) **or** a local install (e.g. `brew install postgresql@16 && brew services start postgresql@16`)
 - Temporal CLI, for running the worker against a dev server (tests don't need it)
 
 ## Quick start
@@ -16,7 +16,9 @@ make up                # start/provision Postgres, install deps, run migrations
 make test              # run the test suite
 ```
 
-`make up` uses `docker compose` when Docker is installed. Otherwise it runs `scripts/local-db.sh`, which creates the `spendctl` role and the `spendctl` / `spendctl_test` databases on the Postgres already listening on `localhost:5432`.
+`make up` uses `docker compose` when Docker is installed. Otherwise it runs `scripts/local-db.sh`, which creates the `spendctl` role and the `spendctl` / `spendctl_test` databases on the Postgres already listening on `localhost:5432`; point `DATABASE_URL` and `TEST_DATABASE_URL` in `.env` at port 5432 in that case.
+
+The Docker Postgres listens on host port **5433** so it can coexist with a local Postgres on 5432.
 
 ## Temporal dev server
 

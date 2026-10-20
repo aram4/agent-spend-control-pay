@@ -1,10 +1,9 @@
 import os
 
-# Point everything at the test database before any spendctl settings are read.
-os.environ["DATABASE_URL"] = os.environ.get(
-    "TEST_DATABASE_URL",
-    "postgresql+asyncpg://spendctl:spendctl@localhost:5432/spendctl_test",
-)
+from spendctl.config import Settings
+
+# Point everything at the test database before get_settings() is first called.
+os.environ["DATABASE_URL"] = Settings().test_database_url
 
 from pathlib import Path
 
