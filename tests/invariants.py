@@ -1,8 +1,11 @@
 import uuid
+from collections import Counter
 
 from sqlalchemy import text
 
 from spendctl.db.engine import get_sessionmaker
+from spendctl.db.models import TERMINAL_PURCHASE_STATES
+from spendctl.providers.base import CardProvider, CardStatus
 
 
 async def assert_budget_invariants(budget_ids: list[uuid.UUID] | None = None) -> None:
@@ -40,6 +43,29 @@ async def assert_one_reservation_per_purchase() -> None:
     assert not dupes, f"multiple reservations per purchase: {dupes}"
 
 
-async def assert_all_invariants(budget_ids: list[uuid.UUID] | None = None) -> None:
+async def assert_card_invariants(provider: CardProvider) -> None:
+    cards = await provider.list_cards()
+    per_key = Counter(c.idem_key for c in cards)
+    dupes = {k: n for k, n in per_key.items() if n > 1}
+    assert not dupes, f"multiple provider cards per purchase: {dupes}"
+
+    live = [c for c in cards if c.status is not CardStatus.CLOSED]
+    async with get_sessionmaker()() as session:
+        active = {
+            wf
+            for (wf,) in await session.execute(
+                text("SELECT workflow_id FROM purchases WHERE NOT (state = ANY(:terminal))"),
+                {"terminal": list(TERMINAL_PURCHASE_STATES)},
+            )
+        }
+    orphans = [c.token for c in live if c.idem_key.removesuffix("-card") not in active]
+    assert not orphans, f"open cards without an active purchase: {orphans}"
+
+
+async def assert_all_invariants(
+    budget_ids: list[uuid.UUID] | None = None, provider: CardProvider | None = None
+) -> None:
     await assert_budget_invariants(budget_ids)
     await assert_one_reservation_per_purchase()
+    if provider is not None:
+        await assert_card_invariants(provider)

@@ -16,6 +16,28 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 Money = Numeric(12, 2)
 
 
+PURCHASE_STATES = (
+    "requested",
+    "reserved",
+    "pending_approval",
+    "approved",
+    "card_issued",
+    "authorized",
+    "settled",
+    "rejected",
+    "expired",
+    "refunded",
+    "partially_refunded",
+)
+TERMINAL_PURCHASE_STATES = frozenset(
+    {"settled", "rejected", "expired", "refunded", "partially_refunded"}
+)
+
+
+def _in(column: str, values) -> str:
+    return f"{column} IN ({', '.join(repr(v) for v in values)})"
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -62,6 +84,39 @@ class Reservation(Base):
     captured_amount: Mapped[Decimal | None] = mapped_column(Money)
     status: Mapped[str] = mapped_column(String, default="held", server_default="held")
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class Purchase(Base):
+    __tablename__ = "purchases"
+    __table_args__ = (CheckConstraint(_in("state", PURCHASE_STATES), name="state_valid"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    workflow_id: Mapped[str] = mapped_column(String, unique=True)
+    state: Mapped[str] = mapped_column(String, default="requested", server_default="requested")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CardRecord(Base):
+    __tablename__ = "cards"
+    __table_args__ = (
+        CheckConstraint("limit_amount > 0", name="limit_positive"),
+        CheckConstraint("status IN ('open', 'paused', 'closed')", name="status_valid"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    purchase_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("purchases.id"), unique=True)
+    provider_card_token: Mapped[str] = mapped_column(String, unique=True)
+    idem_key: Mapped[str] = mapped_column(String, unique=True)
+    merchant_lock: Mapped[str] = mapped_column(String)
+    limit_amount: Mapped[Decimal] = mapped_column(Money)
+    status: Mapped[str] = mapped_column(String, default="open", server_default="open")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

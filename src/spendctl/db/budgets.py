@@ -13,9 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from spendctl.db.engine import get_sessionmaker
 from spendctl.db.models import Budget, Reservation
+from spendctl.money import to_money
 
 DEFAULT_RESERVATION_TTL = timedelta(minutes=30)
-CENT = Decimal("0.01")
 UNIQUE_VIOLATION = "23505"
 
 
@@ -80,15 +80,6 @@ class BudgetView:
         return self.limit_amount - self.spent - self.reserved
 
 
-def _money(value: Decimal | int | str) -> Decimal:
-    if isinstance(value, float):
-        raise TypeError("money must be Decimal, int, or str, never float")
-    amount = Decimal(value)
-    if amount != amount.quantize(CENT):
-        raise ValueError(f"money has sub-cent precision: {value}")
-    return amount.quantize(CENT)
-
-
 def _view(r: Reservation) -> ReservationView:
     return ReservationView(
         id=r.id,
@@ -112,7 +103,7 @@ async def create_budget(
     sm = sessionmaker or get_sessionmaker()
     budget = Budget(
         user_id=user_id,
-        limit_amount=_money(limit_amount),
+        limit_amount=to_money(limit_amount),
         window_type=window_type,
         window_seconds=window_seconds,
     )
@@ -138,7 +129,7 @@ async def reserve(
     ttl: timedelta = DEFAULT_RESERVATION_TTL,
     sessionmaker: async_sessionmaker | None = None,
 ) -> ReserveResult:
-    amount = _money(amount)
+    amount = to_money(amount)
     if amount <= 0:
         raise ValueError("reservation amount must be positive")
     sm = sessionmaker or get_sessionmaker()
@@ -211,7 +202,7 @@ async def capture(
     sessionmaker: async_sessionmaker | None = None,
 ) -> ReservationView:
     """Spend `final_amount` and free the rest. It can't exceed the hold: the card limit is the hold."""
-    final_amount = _money(final_amount)
+    final_amount = to_money(final_amount)
     if final_amount < 0:
         raise ValueError("capture amount must be non-negative")
     sm = sessionmaker or get_sessionmaker()
