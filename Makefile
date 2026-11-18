@@ -1,4 +1,4 @@
-.PHONY: up down migrate test stress worker api
+.PHONY: up down migrate test stress worker api demo
 
 up:
 	@if command -v docker >/dev/null 2>&1; then \
@@ -27,3 +27,6 @@ worker:
 
 api:
 	uv run uvicorn spendctl.api.app:app --reload
+
+demo:
+	uv run python scripts/demo.py

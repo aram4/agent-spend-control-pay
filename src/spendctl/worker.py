@@ -5,24 +5,35 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from spendctl.config import get_settings
+from spendctl.providers.base import CardProvider
+from spendctl.providers.mock import MockCardProvider
+from spendctl.workflows.activities import all_activities
+from spendctl.workflows.purchase import PurchaseWorkflow
 
 
 @activity.defn
 async def ping() -> str:
-    """No-op activity; the SDK refuses to start a worker with nothing registered."""
+    """No-op activity for checking that a worker is up."""
     return "pong"
 
 
-WORKFLOWS: list = []
-ACTIVITIES: list = [ping]
+WORKFLOWS: list = [PurchaseWorkflow]
 
 
-def build_worker(client: Client, task_queue: str | None = None) -> Worker:
+def default_provider() -> CardProvider:
+    if get_settings().privacy_live:
+        raise NotImplementedError("PrivacyCardProvider is not built yet; unset PRIVACY_LIVE")
+    return MockCardProvider()
+
+
+def build_worker(
+    client: Client, task_queue: str | None = None, provider: CardProvider | None = None
+) -> Worker:
     return Worker(
         client,
         task_queue=task_queue or get_settings().task_queue,
         workflows=WORKFLOWS,
-        activities=ACTIVITIES,
+        activities=[ping, *all_activities(provider or default_provider())],
     )
 
 

@@ -2,6 +2,34 @@
 
 A spend-control layer between an AI agent and a real payment rail. The agent never holds a real card: every purchase goes through budget reservation, deterministic policy gates, an LLM intent check, optional human approval, and a single-use, merchant-locked virtual card. See [PLAN.md](PLAN.md) for the full design and build phases.
 
+## Status
+
+Working today: an end-to-end `PurchaseWorkflow` on Temporal against a mock card provider:
+
+1. **Reserve** the amount against the budget (row-locked, idempotent), or reject if it doesn't fit
+2. **Issue** a single-use virtual card locked to one merchant, with the reservation as its hard limit
+3. **Wait** for the merchant's charge, read from the card provider's records, never from the agent
+4. **Close** the card as soon as it's charged or the checkout window ends
+5. **Capture** what actually settled and free the rest of the hold, or release everything if nothing was charged
+
+Still to come: deterministic policy gates, the LLM intent check, human approval, and the real (Privacy.com) card provider. See [PLAN.md](PLAN.md).
+
+## Demo
+
+```sh
+temporal server start-dev   # terminal 1 (web UI on http://localhost:8233)
+make demo                   # terminal 2
+```
+
+The demo runs four purchases against a $100 budget and prints a link to each one's history in the Temporal UI:
+
+| Scenario | Outcome |
+|---|---|
+| Normal purchase; the merchant settles for less than it authorized | Settled; only the settled amount is spent |
+| Purchase larger than the remaining budget | Rejected before any card exists |
+| Card charged by the wrong merchant, then abandoned | Declined at the card; card closed and funds released when checkout times out |
+| Provider creates the card but the response is lost | Temporal retries; the retry adopts the existing card, so no duplicate |
+
 ## Prerequisites
 
 - [uv](https://docs.astral.sh/uv/) (installs Python 3.12 automatically)
@@ -47,6 +75,7 @@ Tests use Temporal's time-skipping test environment, which the SDK downloads on 
 | `make up` | Postgres up (Docker or local), `uv sync`, `alembic upgrade head` |
 | `make test` | `pytest` against the `spendctl_test` database |
 | `make stress` | Concurrency + idempotency tests for the money path, 50 runs in a row |
+| `make demo` | Run the end-to-end purchase demo (needs `temporal server start-dev`) |
 | `make worker` | Run the Temporal worker |
 | `make api` | Run the FastAPI app with reload |
 | `make migrate` | Apply Alembic migrations |
